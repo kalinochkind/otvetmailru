@@ -659,7 +659,7 @@ class OtvetClient:
     def iterate_user_rating_by_points(self, category: CategoryInput = None, *, step: int = 20
                                       ) -> Iterator[List[models.UserInRating]]:
         """
-        Lists of users in the daily rating by points.
+        Lists of users in the weekly rating by points.
         :param category: category (all by default)
         :param step: size of one list
         :return: lists of users
