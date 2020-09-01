@@ -563,13 +563,14 @@ class OtvetClient:
         :param step: size of one list (except maybe the first one)
         :return: lists of answers
         """
-        if isinstance(question, models.Question):
-            if question.answers:
-                yield question.answers
-            offset = len(question.answers)
-        else:
-            offset = 0
-        if hasattr(question, 'answer_count') and offset >= question.answer_count:
+        if getattr(question, 'answer_count', None) == 0:
+            return
+        if not isinstance(question, models.Question):
+            question = self.get_question(question, answer_count=step)
+        if question.answers:
+            yield question.answers
+        offset = len(question.answers)
+        if offset >= question.answer_count:
             return
         while True:
             answers = self.get_more_answers_page(question.id, offset, step)
