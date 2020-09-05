@@ -367,7 +367,7 @@ def build_follower_preview(data: dict) -> models.FollowerPreview:
     user = build_small_user_preview(data)
     return models.FollowerPreview(
         **vars(user),
-        followed_by_me=bool(data['fr']),
+        is_followed_by_me=bool(data['fr']),
     )
 
 

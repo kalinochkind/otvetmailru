@@ -152,10 +152,7 @@ class BaseQuestion:
 
 @dataclass
 class SimpleQuestion(BaseQuestion):
-    id: int
-    title: str
     state: QuestionState
-    category: Category
     age_seconds: int
     is_leader: bool
     poll_type: PollType
@@ -386,7 +383,7 @@ class SimilarQuestionSearchResult(BaseQuestion):
 
 @dataclass
 class FollowerPreview(SmallUserPreview):
-    followed_by_me: bool
+    is_followed_by_me: bool
 
 
 @dataclass

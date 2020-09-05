@@ -446,6 +446,7 @@ class OtvetClient:
         Daily limits
         :return: limits object
         """
+        self._ensure_authenticated()
         data = self._call_checked('/v2/showlimits', {})
         return factories.build_limits(data)
 
@@ -474,6 +475,7 @@ class OtvetClient:
         Current user settings
         :return: settings object
         """
+        self._ensure_authenticated()
         data = self._call_checked('/v2/showsettings', {})
         return factories.build_settings(data)
 
