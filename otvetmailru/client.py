@@ -733,10 +733,11 @@ class OtvetClient:
 
     def _add_question(self, category: CategoryInput, params: dict) -> int:
         self._ensure_authenticated()
-        category = self._normalize_category(category)
-        if not category:
-            error.OtvetArgumentError('A category is required')
-        category = self.categories.by_urlname(category)
+        if not isinstance(category, models.Category):
+            category = self._normalize_category(category)
+            if not category:
+                error.OtvetArgumentError('A category is required')
+            category = self.categories.by_urlname(category)
         if category.children:
             raise error.OtvetArgumentError('Asking questions is allowed only in categories without subcategories')
         if category.parent:
