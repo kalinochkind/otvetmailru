@@ -2,6 +2,13 @@
 
 otvet.mail.ru API wrapper
 
+## Installation
+
+`pip install otvetmailru`
+
+## Import
+
+`from otvetmailru import OtvetClient`
 
 ## Documentation
 
