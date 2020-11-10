@@ -731,15 +731,22 @@ class OtvetClient:
         return factories.build_user_profile(data, user)
 
 
-    def _add_question(self, category: CategoryInput, params: dict) -> int:
-        self._ensure_authenticated()
-        if not isinstance(category, models.Category):
-            category = self._normalize_category(category)
-            if not category:
-                error.OtvetArgumentError('A category is required')
-            category = self.categories.by_urlname(category)
+    def _normalize_category_object(self, category: CategoryInput) -> models.Category:
+        if isinstance(category, models.Category):
+            return category
+        category = self._normalize_category(category)
+        if not category:
+            raise error.OtvetArgumentError('A category is required')
+        return self.categories.by_urlname(category)
+
+    def _ensure_child_category(self, category: models.Category) -> None:
         if category.children:
             raise error.OtvetArgumentError('Asking questions is allowed only in categories without subcategories')
+
+    def _add_question(self, category: CategoryInput, params: dict) -> int:
+        self._ensure_authenticated()
+        category = self._normalize_category_object(category)
+        self._ensure_child_category(category)
         if category.parent:
             params['cid'] = category.parent.id
             params['subcid'] = category.id
@@ -779,6 +786,37 @@ class OtvetClient:
         params = {'Body': text, 'qtext': title, 'cancmt': int(bool(allow_comments)), 'watch': int(bool(watch)),
                   'poll': 'C' if allow_multiple else 'S', 'poll_options[]': poll_options}
         return self._add_question(category, params)
+
+    def edit_question(self, question: QuestionInput, category: CategoryInput = None, title: str = None,
+                      text: str = None, poll_options: List[str] = None) -> models.Question:
+        """
+        Edit a question.
+        :param question: question to edit
+        :param category: new category
+        :param title: new title
+        :param text: new text
+        :param poll_options: new poll options
+        :return: edited question object
+        """
+        if not isinstance(question, models.Question):
+            question = self.get_question(question)
+        if not question.edit_token:
+            raise error.OtvetArgumentError('Cannot edit this question')
+        current_poll_options = question.poll.options if question.poll else []
+        params = {'id': question.id, 'edit_token': question.edit_token, 'header': question.title,
+                  'text': question.text, 'cid': question.category.id,
+                  'poll_options[]': [f'{o.id}:{o.text}' for o in current_poll_options]}
+        utils.update_not_none(params, {'header': title, 'text': text})
+        if category is not None:
+            category = self._normalize_category_object(category)
+            self._ensure_child_category(category)
+            params['cid'] = category.id
+        if poll_options is not None:
+            if len(poll_options) > len(current_poll_options):
+                raise error.OtvetArgumentError('Cannot add more options when editing a poll')
+            params['poll_options[]'] = [f'{o.id}:{t}' for o, t in zip(current_poll_options, poll_options)]
+        data = self._call_checked('/v2/editqst', params)
+        return factories.build_question(data, self.categories)
 
     def add_answer(self, question: QuestionInput, text: str) -> int:
         """
