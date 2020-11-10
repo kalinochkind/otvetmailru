@@ -995,4 +995,9 @@ class OtvetClient:
 # TODO abuse
 # TODO is_adult without auth
 # TODO company/expert page
-# TODO hidden categories
+# TODO edit question
+# TODO change settings
+# TODO add images and videos
+# TODO see images and videos
+# TODO localized errors
+# TODO answer_json question_only param

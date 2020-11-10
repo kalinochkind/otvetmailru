@@ -200,6 +200,7 @@ def build_question(data: dict, category_provider: categories.Categories) -> mode
         deleted_by_id=int(data['deleted_by']['id']) if 'deleted_by' in data else None,
         comments=comments,
         can_recommend_to_golden=bool(data.get('goldrec')),
+        edit_token=data.get('edit_token'),
     )
     return question
 

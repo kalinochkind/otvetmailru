@@ -297,6 +297,7 @@ class Question(SimpleQuestion):
     poll: Optional[Poll]
     deleted_by_id: Optional[int]
     can_recommend_to_golden: bool
+    edit_token: Optional[str]
 
 
 @dataclass
