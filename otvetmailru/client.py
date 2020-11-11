@@ -798,6 +798,7 @@ class OtvetClient:
         :param poll_options: new poll options
         :return: edited question object
         """
+        self._ensure_authenticated()
         if not isinstance(question, models.Question):
             question = self.get_question(question)
         if not question.edit_token:
@@ -1033,7 +1034,6 @@ class OtvetClient:
 # TODO abuse
 # TODO is_adult without auth
 # TODO company/expert page
-# TODO edit question
 # TODO change settings
 # TODO add images and videos
 # TODO see images and videos
