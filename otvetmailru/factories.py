@@ -201,6 +201,9 @@ def build_question(data: dict, category_provider: categories.Categories) -> mode
         comments=comments,
         can_recommend_to_golden=bool(data.get('goldrec')),
         edit_token=data.get('edit_token'),
+        brand_answer_status=models.BrandAnswerStatus.answered if data.get('has_brand_answer') else
+                            models.BrandAnswerStatus.waiting if data.get('waiting_brand_reply') else
+                            models.BrandAnswerStatus.none,
     )
     return question
 

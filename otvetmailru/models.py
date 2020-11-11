@@ -44,6 +44,16 @@ class RatingType(Enum):
     best_answer_count = 'bestanscnt'
 
 
+class BrandAnswerStatus(Enum):
+    """If the question has a brand reply or is waiting for one."""
+    none = 0
+    waiting = 1
+    answered = 2
+
+    def __bool__(self):
+        return bool(self.value)
+
+
 class Avatar:
     """
     Avatar wrapper.
@@ -298,6 +308,7 @@ class Question(SimpleQuestion):
     deleted_by_id: Optional[int]
     can_recommend_to_golden: bool
     edit_token: Optional[str]
+    brand_answer_status: BrandAnswerStatus
 
 
 @dataclass
