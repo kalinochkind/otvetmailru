@@ -363,19 +363,32 @@ class OtvetClient:
         return [factories.build_user(u, {}) if all_time else factories.build_user_in_rating(u, rating_type) for u in
                 data['rating']]
 
-    def get_search_page(self, query: str, sort_by_date: bool = False, step: int = 20, offset: int = 0
-                        ) -> List[models.QuestionSearchResult]:
+    def get_search_page(self, query: str, sort_by_date: bool = False, step: int = 20, offset: int = 0, *,
+                        state: StateInput = None, category: CategoryInput = None, last_days: float = None,
+                        questions_only: bool = False) -> List[models.QuestionSearchResult]:
         """
         Search questions.
         :param query: query string
         :param sort_by_date: sort by date, not by relevance
         :param step: number of results
         :param offset: offset of the first result
+        :param state: search only questions with this state
+        :param category: search in this category
+        :param last_days: search only questions not older than this number of days
+        :param questions_only: search only in question text
         :return: list of questions
         """
         params = {'num': step, 'sf': offset, 'q': query}
         if sort_by_date:
             params['sort'] = 'date'
+        if state is not None:
+            params['zvstate'] = {'A': 3, 'V': 2, 'R': 1}[normalize_state(state).value]
+        if category is not None:
+            params['zVCat'] = self._normalize_category_object(category).id
+        if last_days is not None:
+            params['zdts'] = -int(last_days * 86400)
+        if questions_only:
+            params['question_only'] = 1
         data = self._call_checked('https://otvet.mail.ru/go-proxy/answer_json', params, direct=True)
         return [factories.build_question_search_result(q, self.categories) for q in data['results']]
 
@@ -681,16 +694,22 @@ class OtvetClient:
         yield from iterate_pages(lambda p: self.get_user_rating_page(category=category, step=step, offset=p),
                                  step)
 
-    def iterate_search(self, query: str, sort_by_date: bool = False, *, step: int = 20
-                       ) -> Iterator[List[models.QuestionSearchResult]]:
+    def iterate_search(self, query: str, sort_by_date: bool = False, *, step: int = 20,
+                       state: StateInput = None, category: CategoryInput = None, last_days: float = None,
+                       questions_only: bool = False) -> Iterator[List[models.QuestionSearchResult]]:
         """
         Lists of questions returned by search.
         :param query: query string
         :param sort_by_date: whether to sort by date, not by relevance
         :param step: size of one list
+        :param state: search only questions with this state
+        :param category: search in this category
+        :param last_days: search only questions not older than this number of days
+        :param questions_only: search only in question text
         :return: lists of questions
         """
-        yield from iterate_pages(lambda p: self.get_search_page(query, sort_by_date, step, p), step)
+        yield from iterate_pages(lambda p: self.get_search_page(query, sort_by_date, step, p, state=state, category=category,
+                                                                last_days=last_days, questions_only=questions_only), step)
 
     def iterate_following(self, user: UserInput = None, *, step: int = 20) -> Iterator[List[models.SmallUserPreview]]:
         """
@@ -1050,4 +1069,3 @@ class OtvetClient:
 # TODO add images and videos
 # TODO see images and videos
 # TODO localized errors
-# TODO answer_json question_only param
