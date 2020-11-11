@@ -522,7 +522,7 @@ class OtvetClient:
                               delay: float = 10, include_first_batch: bool = True
                               ) -> Iterator[List[models.QuestionPreview]]:
         """
-        Lists of neu questions, as they appear.
+        Lists of new questions, as they appear.
         If questions are asked too fast, some of them may be skipped.
         :param state: state of the questions (open, voting, resolved), open by default
         :param category: category of the questions (all by default)
@@ -558,29 +558,41 @@ class OtvetClient:
         """
         yield from iterate_pages(lambda p: self.get_user_questions_page(user, state, only_hidden, step, p), step)
 
-    def iterate_answers(self, question: QuestionInput, *, step: int = 20) -> Iterator[List[models.Answer]]:
+    def iterate_answers(self, question: QuestionInput, *, step: int = 20,
+                        infinite: bool = False, delay: float = 10) -> Iterator[List[models.Answer]]:
         """
         Lists of answers to a question.
         :param question: question. If the question object contains some answers by itself they are returned first
         :param step: size of one list (except maybe the first one)
+        :param infinite: yield new answers as they appear
+        :param delay: interval between checks in seconds
         :return: lists of answers
         """
-        if getattr(question, 'answer_count', None) == 0:
+        if getattr(question, 'answer_count', None) == 0 and not infinite:
             return
         if not isinstance(question, models.Question):
             question = self.get_question(question, answer_count=step)
         if question.answers:
             yield question.answers
         offset = len(question.answers)
-        if offset >= question.answer_count:
+        if offset < question.answer_count:
+            while True:
+                answers = self.get_more_answers_page(question.id, step, offset)
+                if answers:
+                    yield answers
+                offset += len(answers)
+                if len(answers) < step:
+                    break
+        if not infinite:
             return
+        last_call = time.time()
         while True:
-            answers = self.get_more_answers_page(question.id, offset, step)
+            time.sleep(max(0., last_call + delay - time.time()))
+            last_call = time.time()
+            answers = self.get_more_answers_page(question.id, step, offset)
             if answers:
                 yield answers
-            if len(answers) < step:
-                return
-            offset += step
+            offset += len(answers)
 
     def iterate_votes(self, option: OptionInput, *, step: int = 20) -> Iterator[List[models.PollUserPreview]]:
         """
