@@ -57,11 +57,24 @@ def build_user_question_preview(data: dict, category_provider: categories.Catego
 
 
 def build_small_user_preview(data: dict) -> models.SmallUserPreview:
+    if 'brand_cid' in data:
+        return build_brand_small_user_preview(data)
     return models.SmallUserPreview(
         id=int(data['id']),
         name=data['nick'],
         avatar=models.Avatar(data['filin']),
         rate=rates.by_name(data['lvl']),
+    )
+
+
+def build_brand_small_user_preview(data: dict) -> models.BrandSmallUserPreview:
+    return models.BrandSmallUserPreview(
+        id=int(data['id']),
+        name=data['nick'],
+        avatar=models.Avatar(data['filin']),
+        rate=None,
+        brand_id=int(data['brand_cid']),
+        brand_description=data['brand'],
     )
 
 
@@ -76,19 +89,39 @@ def build_user(data: dict, user_cache: Dict[int, models.User]) -> models.User:
             about=data['about'],
             avatar=models.Avatar(data['ofilin' if 'ofilin' in data else 'filin']),
             is_expert=bool(data['is_expert']),
-            points=int(data['points']),
-            rate=rates.by_user_stats(int(data['points']), float(data['kpd'])),
+            points=int(data['points']) if 'points' in data else None,
+            rate=rates.by_user_stats(int(data['points']), float(data['kpd'])) if 'points' in data else None,
         )
+        if data.get('brand_url'):
+            user_cache[user_id] = models.BrandUser(
+                **vars(user_cache[user_id]),
+                brand=build_brand(data),
+                role=data['role'],
+            )
     return user_cache[user_id]
 
 
 def build_comment_user_preview(data: dict) -> models.CommentUserPreview:
+    if data.get('brand_url'):
+        return build_brand_comment_user_preview(data)
     return models.CommentUserPreview(
         id=int(data['usrid']),
         name=data['nick'],
         avatar=models.Avatar(data['ofilin']),
         points=int(data['points']),
         rate=rates.by_name(data['lvl']),
+    )
+
+
+def build_brand_comment_user_preview(data: dict) -> models.BrandCommentUserPreview:
+    return models.BrandCommentUserPreview(
+        id=int(data['usrid']),
+        name=data['nick'],
+        avatar=models.Avatar(data['ofilin']),
+        points=int(data['points']),
+        rate=None,
+        brand=build_brand(data),
+        role=data['role'],
     )
 
 
@@ -208,7 +241,10 @@ def build_question(data: dict, category_provider: categories.Categories) -> mode
     return question
 
 
-def build_user_profile(data: dict, user_id: int) -> models.UserProfile:
+def build_user_profile(data: dict, user_id: int, category_provider: categories.Categories
+                       ) -> models.UserProfile:
+    if 'expert' in data:
+        return build_brand_expert_profile(data, user_id, category_provider)
     profile = models.UserProfile(
         id=user_id,
         name=data['snick'],
@@ -230,7 +266,7 @@ def build_user_profile(data: dict, user_id: int) -> models.UserProfile:
         voting_question_count=int(data['cnt']['questions_voting']),
         resolved_question_count=int(data['cnt']['questions_resolved']),
         blacklisted_count=int(data['black_cnt']),
-        followers_count=int(data['followers']),
+        followers_count=int(data['cnt']['followers']),
         following_count=int(data['following']),
         week_points=int(data['weekpoints']),
         avatar=models.Avatar(data['sfilin' if 'sfilin' in data else 'filin']),
@@ -243,6 +279,47 @@ def build_user_profile(data: dict, user_id: int) -> models.UserProfile:
             removed_question_count=int(data['cnt']['questions_removed']),
             banned_until=datetime.datetime.fromtimestamp(data['ban_until']) if 'ban_until' in data else None,
         )
+    return profile
+
+
+def build_brand_expert_profile(data: dict, user_id: int, category_provider: categories.Categories
+                               ) -> models.BrandExpertProfile:
+    brand = models.BrandBadge(
+        urlname=data['company']['page'],
+        brand_url=data['company']['url'],
+        name=data['company']['name'],
+        logo_url=data['company']['logo'],
+        background_url=data['company']['bg'],
+    )
+    profile = models.BrandExpertProfile(
+        id=user_id,
+        name=data['snick'],
+        points=int(data['spoints']),
+        rate=rates.by_name(data['srank']),
+        about=data['expert']['description'],
+        kpd=float(data['skpd']),
+        is_expert=bool(data['isExpert']),
+        is_vip=bool(data['vip']),
+        is_banned=bool(data['banned']),
+        is_followed_by_me=not data['canSubscribe'],
+        is_hidden=bool(data['hidden']),
+        place=None,
+        answer_count=int(data['sans']),
+        best_answer_count=int(data['sbans']),
+        deleted_answer_count=int(data['cnt']['deleted_answers']),
+        question_count=int(data['sqst']),
+        open_question_count=int(data['cnt']['questions_new']),
+        voting_question_count=int(data['cnt']['questions_voting']),
+        resolved_question_count=int(data['cnt']['questions_resolved']),
+        blacklisted_count=None,
+        followers_count=int(data['cnt']['followers']),
+        following_count=None,
+        week_points=None,
+        avatar=models.Avatar(data['sfilin' if 'sfilin' in data else 'filin']),
+        categories=[category_provider.by_id(int(c)) for c in data['categories']],
+        brand=brand,
+        role=data['expert']['role'],
+    )
     return profile
 
 
@@ -389,4 +466,31 @@ def build_settings(data: dict) -> models.Settings:
         comment_web='COW' not in data['pers'],
         vote_mail='PVM' not in data['pers'],
         vote_web='PVW' not in data['pers'],
+    )
+
+
+def build_brand(data: dict) -> models.Brand:
+    return models.Brand(
+        urlname=data['brand_url'],
+        brand_url=data['url'],
+        description=data['brand'],
+    )
+
+
+def build_brand_profile(data: dict) -> models.BrandProfile:
+    return models.BrandProfile(
+        urlname=data['urlname'],
+        brand_url=data['brand_url'],
+        name=data['name'],
+        logo_url=data['brand_logo'],
+        background_url=data['brand_background'],
+        id=int(data['id']),
+        answer_count=int(data['cnt']['answers']),
+        best_answer_count=int(data['cnt']['best_answers']),
+        followers_count=int(data['cnt']['followers']),
+        open_question_count=int(data['cnt']['questions_new']),
+        voting_question_count=int(data['cnt']['questions_voting']),
+        resolved_question_count=int(data['cnt']['questions_resolved']),
+        description=data['brand_persontext'],
+        is_followed_by_me=bool(data['subscribed']),
     )

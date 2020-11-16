@@ -17,6 +17,7 @@ OptionInput = Union[int, models.PollOption]
 QuestionInput = Union[int, models.BaseQuestion]
 AnswerInput = Union[int, models.BaseAnswer]
 CommentInput = Union[int, models.Comment]
+BrandInput = Union[str, models.BaseBrand]
 
 
 def normalize_state(state: StateInput) -> Optional[models.QuestionState]:
@@ -51,8 +52,19 @@ def normalize_comment(comment: CommentInput) -> int:
     return comment
 
 
+def normalize_brand(brand: BrandInput) -> str:
+    if isinstance(brand, models.BaseBrand):
+        return brand.urlname
+    return brand
+
+
 def extract_categories_json(page: str) -> List[dict]:
     string = re.search(r'var CATEGORIES = (\[.*)$', page, re.MULTILINE).group(1)
+    return utils.read_json_prefix(string)
+
+
+def extract_brands_json(page: str) -> List[str]:
+    string = re.search(r'var BRANDURLS = (\[.*)$', page, re.MULTILINE).group(1)
     return utils.read_json_prefix(string)
 
 
@@ -88,6 +100,7 @@ class OtvetClient:
         self._categories: Optional[categories.Categories] = None
         self._auto_renew_token: bool = auto_renew_token
         self._api_retry_attempts = api_retry_attempts
+        self._brand_list: List[str] = None
         if auth_info:
             self._load_auth_info(auth_info)
 
@@ -95,6 +108,8 @@ class OtvetClient:
         main_page = self._session.get('https://otvet.mail.ru/?login=1').text
         if not self._categories:
             self._categories = categories.Categories(extract_categories_json(main_page))
+        if not self._brand_list:
+            self._brand_list = extract_brands_json(main_page)
         if 'ot' in self._session.cookies:
             token = self._session.cookies['ot']
             salt = re.search(r'"salt" : "([a-zA-Z0-9]+)"', main_page).group(1)
@@ -185,6 +200,12 @@ class OtvetClient:
         if not self._categories:
             self._load_main_page()
         return self._categories
+
+    @property
+    def brand_list(self) -> List[str]:
+        if not self._brand_list:
+            self._load_main_page()
+        return self._brand_list
 
     @property
     def auth_info(self) -> str:
@@ -492,6 +513,11 @@ class OtvetClient:
         data = self._call_checked('/v2/showsettings', {})
         return factories.build_settings(data)
 
+    def get_brand_experts(self, brand: BrandInput) -> List[models.BrandUser]:
+        brand = normalize_brand(brand)
+        data = self._call_checked('/v2/expert_list', {'urlname': brand})
+        return [factories.build_user(u, {}) for u in data['list']]
+
 
     def iterate_questions(self, state: StateInput = 'A', category: CategoryInput = None, *,
                           category_exclude: str = '', step: int = 20, only_leaders: bool = False
@@ -750,6 +776,9 @@ class OtvetClient:
         data = self._call_checked('/v2/question', params)
         return factories.build_question(data, self.categories)
 
+    def get_answer(self):
+        pass
+
     def get_user(self, user: UserInput = None) -> models.UserProfile:
         """
         A full user profile object.
@@ -759,7 +788,13 @@ class OtvetClient:
         """
         user = self._normalize_user(user)
         data = self._call_checked('/v2/stats_ex', {'user': user})
-        return factories.build_user_profile(data, user)
+        return factories.build_user_profile(data, user, self.categories)
+
+    def get_brand(self, brand: BrandInput) -> models.BrandProfile:
+        brand = normalize_brand(brand)
+        params = {'urlname': brand, 'sub': 1, 'stat': 1}
+        data = self._call_checked('/v2/getBrands', params)['data']
+        return factories.build_brand_profile(data)
 
 
     def _normalize_category_object(self, category: CategoryInput) -> models.Category:

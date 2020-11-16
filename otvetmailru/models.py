@@ -90,6 +90,32 @@ class Rate:
 
 
 @dataclass
+class BaseBrand:
+    """Base class for a brand."""
+    urlname: str
+    brand_url: str
+
+    def __eq__(self, other):
+        return isinstance(other, BaseBrand) and self.urlname == other.urlname
+
+    @property
+    def url(self) -> str:
+        return f'https://otvet.mail.ru/{self.urlname}'
+
+
+@dataclass(eq=False)
+class Brand(BaseBrand):
+    description: str
+
+
+@dataclass(eq=False)
+class BrandBadge(BaseBrand):
+    name: str
+    logo_url: str
+    background_url: str
+
+
+@dataclass
 class BaseUser:
     """Base class for a user."""
     id: int
@@ -105,22 +131,34 @@ class BaseUser:
         return f'https://otvet.mail.ru/profile/id{self.id}/'
 
 
-@dataclass
+@dataclass(eq=False)
 class SmallUserPreview(BaseUser):
-    rate: Rate
+    rate: Optional[Rate]
 
 
-@dataclass
+@dataclass(eq=False)
+class BrandSmallUserPreview(SmallUserPreview):
+    brand_id: int
+    brand_description: str
+
+
+@dataclass(eq=False)
 class CommentUserPreview(SmallUserPreview):
     points: int
 
 
-@dataclass
+@dataclass(eq=False)
+class BrandCommentUserPreview(CommentUserPreview):
+    brand: Brand
+    role: str
+
+
+@dataclass(eq=False)
 class PollUserPreview(SmallUserPreview):
     email: str
 
 
-@dataclass
+@dataclass(eq=False)
 class UserPreview(BaseUser):
     is_vip: bool
     kpd: float
@@ -160,7 +198,7 @@ class BaseQuestion:
         return f'https://otvet.mail.ru/question/{self.id}'
 
 
-@dataclass
+@dataclass(eq=False)
 class SimpleQuestion(BaseQuestion):
     state: QuestionState
     age_seconds: int
@@ -169,32 +207,38 @@ class SimpleQuestion(BaseQuestion):
     answer_count: int
 
 
-@dataclass
+@dataclass(eq=False)
 class QuestionPreview(SimpleQuestion):
     author: UserPreview
 
 
-@dataclass
+@dataclass(eq=False)
 class BestQuestionPreview(QuestionPreview):
     can_like: bool
     like_count: int
 
 
-@dataclass
+@dataclass(eq=False)
 class UserQuestionPreview(SimpleQuestion):
     is_hidden: bool
 
 
-@dataclass
+@dataclass(eq=False)
 class User(UserPreview):
-    points: int
-    rate: Rate
+    points: Optional[int]
+    rate: Optional[Rate]
 
 
-@dataclass
+@dataclass(eq=False)
 class UserInRating(User):
     rating_type: RatingType
     rating_points: int
+
+
+@dataclass(eq=False)
+class BrandUser(User):
+    brand: Brand
+    role: str
 
 
 @dataclass
@@ -237,7 +281,7 @@ class BaseAnswer:
         return f'https://otvet.mail.ru/answer/{self.id}'
 
 
-@dataclass
+@dataclass(eq=False)
 class Answer(BaseAnswer):
     author: User
     source: str
@@ -282,7 +326,7 @@ class Poll:
     i_voted: bool
 
 
-@dataclass
+@dataclass(eq=False)
 class Question(SimpleQuestion):
     author: User
     best_answer: Optional[Answer]
@@ -311,13 +355,13 @@ class Question(SimpleQuestion):
     brand_answer_status: BrandAnswerStatus
 
 
-@dataclass
+@dataclass(eq=False)
 class UserProfile(User):
     """User profile page."""
     is_banned: bool
     is_followed_by_me: bool
     is_hidden: bool
-    place: int
+    place: Optional[int]
     answer_count: int
     best_answer_count: int
     deleted_answer_count: int
@@ -325,19 +369,39 @@ class UserProfile(User):
     open_question_count: int
     voting_question_count: int
     resolved_question_count: int
-    blacklisted_count: int
+    blacklisted_count: Optional[int]
     followers_count: int
-    following_count: int
-    week_points: int
+    following_count: Optional[int]
+    week_points: Optional[int]
 
 
-@dataclass
+@dataclass(eq=False)
 class MyUserProfile(UserProfile):
     """Profile page of myself, has a few extra fields."""
     watching_question_count: int  # watchcnt
     direct_question_count: int  # cnt
     removed_question_count: int  # cnt
     banned_until: Optional[datetime.datetime]
+
+
+@dataclass(eq=False)
+class BrandExpertProfile(UserProfile):
+    categories: List[Category]
+    brand: BrandBadge
+    role: str
+
+
+@dataclass(eq=False)
+class BrandProfile(BrandBadge):
+    id: int
+    answer_count: int
+    best_answer_count: int
+    followers_count: int
+    open_question_count: int
+    voting_question_count: int
+    resolved_question_count: int
+    description: str
+    is_followed_by_me: bool
 
 
 @dataclass
@@ -361,23 +425,23 @@ class Limits:
     current: LimitSet
 
 
-@dataclass
+@dataclass(eq=False)
 class MinimalUserPreview(BaseUser):
     pass
 
 
-@dataclass
+@dataclass(eq=False)
 class MinimalQuestionPreview(SimpleQuestion):
     author: MinimalUserPreview
 
 
-@dataclass
+@dataclass(eq=False)
 class AnswerPreview(BaseAnswer):
     is_best: bool
     question: MinimalQuestionPreview
 
 
-@dataclass
+@dataclass(eq=False)
 class QuestionSearchResult(BaseQuestion):
     text: str
     answer_count: int
@@ -388,12 +452,12 @@ class QuestionSearchResult(BaseQuestion):
     author: MinimalUserPreview
 
 
-@dataclass
+@dataclass(eq=False)
 class SimilarQuestionSearchResult(BaseQuestion):
     pass
 
 
-@dataclass
+@dataclass(eq=False)
 class FollowerPreview(SmallUserPreview):
     is_followed_by_me: bool
 
