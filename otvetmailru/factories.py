@@ -192,7 +192,7 @@ def build_comment(data: dict, user_cache: Dict[int, models.User]) -> models.Comm
     )
 
 
-def build_question(data: dict, category_provider: categories.Categories) -> models.Question:
+def build_incomplete_question(data: dict, category_provider: categories.Categories) -> models.IncompleteQuestion:
     category = category_provider.by_id(int(data['cid']))
     user_cache = {}
     user = build_user(data, user_cache)
@@ -201,23 +201,19 @@ def build_question(data: dict, category_provider: categories.Categories) -> mode
     additions = [build_question_addition(a) for a in data['adds']]
     poll = build_poll(data['poll']) if 'poll' in data else None
     comments = [build_comment(c, user_cache) for c in data['comments']] if poll else None
-    question = models.Question(
+    question = models.IncompleteQuestion(
         id=int(data['qid']),
         category=category,
         author=user,
         can_choose_best_answer=bool(data['acanselbest']),
-        best_answer_vote_count=int(data['arating']),
         age_seconds=int(data['added']),
         like_count=int(data['totalmarks']),
         answer_count=int(data['anscnt']),
         comment_count=int(data['comcnt']),
-        can_edit=bool(data['can_edit']),
         can_comment=bool(int(data['cancomment'])),
         can_like=bool(data.get('canmark')),
         can_answer=bool(data['canreply']),
-        can_add=not data['noadd'],
         cannot_answer_reason=data.get('canreplyreason', {}).get('error'),
-        created_at=datetime.datetime.fromtimestamp(int(data['created_at'])),
         title=data['qtext'],
         text=data['qcomment'],
         is_hidden=bool(int(data['hidden'])),
@@ -235,8 +231,19 @@ def build_question(data: dict, category_provider: categories.Categories) -> mode
         can_recommend_to_golden=bool(data.get('goldrec')),
         edit_token=data.get('edit_token'),
         brand_answer_status=models.BrandAnswerStatus.answered if data.get('has_brand_answer') else
-                            models.BrandAnswerStatus.waiting if data.get('waiting_brand_reply') else
-                            models.BrandAnswerStatus.none,
+        models.BrandAnswerStatus.waiting if data.get('waiting_brand_reply') else
+        models.BrandAnswerStatus.none,
+    )
+    return question
+
+def build_question(data: dict, category_provider: categories.Categories) -> models.Question:
+    incomplete_question = build_incomplete_question(data, category_provider)
+    question = models.Question(
+        **vars(incomplete_question),
+        best_answer_vote_count=int(data['arating']),
+        can_edit=bool(data['can_edit']),
+        can_add=not data['noadd'],
+        created_at=datetime.datetime.fromtimestamp(int(data['created_at'])),
     )
     return question
 

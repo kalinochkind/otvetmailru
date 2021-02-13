@@ -327,10 +327,10 @@ class Poll:
 
 
 @dataclass(eq=False)
-class Question(SimpleQuestion):
+class IncompleteQuestion(SimpleQuestion):
+    """Question without some fields, returned by some methods."""
     author: User
     best_answer: Optional[Answer]
-    best_answer_vote_count: int
     can_choose_best_answer: bool
     liked_by: List[SmallUserPreview]
     like_count: int
@@ -338,13 +338,10 @@ class Question(SimpleQuestion):
     comments: Optional[List[Comment]]
     comment_count: int
     answers: List[Answer]
-    can_edit: bool
     can_comment: bool
     can_like: bool
     can_answer: bool
-    can_add: bool
     cannot_answer_reason: Optional[str]
-    created_at: datetime.datetime
     text: str
     is_hidden: bool
     is_watching: bool
@@ -353,6 +350,14 @@ class Question(SimpleQuestion):
     can_recommend_to_golden: bool
     edit_token: Optional[str]
     brand_answer_status: BrandAnswerStatus
+
+
+@dataclass(eq=False)
+class Question(IncompleteQuestion):
+    best_answer_vote_count: int
+    can_edit: bool
+    can_add: bool
+    created_at: datetime.datetime
 
 
 @dataclass(eq=False)

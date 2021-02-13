@@ -776,8 +776,16 @@ class OtvetClient:
         data = self._call_checked('/v2/question', params)
         return factories.build_question(data, self.categories)
 
-    def get_answer(self):
-        pass
+    def get_question_by_answer(self, answer: AnswerInput) -> models.IncompleteQuestion:
+        """
+        Question object by answer.
+        :param answer: answer
+        :return: question to which the answer was given
+        """
+        answer = normalize_answer(answer)
+        data = self._call_checked('/v2/showans', {'aid': answer})
+        question = factories.build_incomplete_question(data, self.categories)
+        return question
 
     def get_user(self, user: UserInput = None) -> models.UserProfile:
         """
