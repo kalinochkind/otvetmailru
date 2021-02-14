@@ -105,11 +105,13 @@ class BaseBrand:
 
 @dataclass(eq=False)
 class Brand(BaseBrand):
+    """Brand representtion from user card."""
     description: str
 
 
 @dataclass(eq=False)
 class BrandBadge(BaseBrand):
+    """Brand badge in expert profile."""
     name: str
     logo_url: str
     background_url: str

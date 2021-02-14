@@ -185,10 +185,12 @@ class OtvetClient:
         return category.urlname
 
     def check_authentication(self):
-        """Ensure that the authentication data is valid.
+        """
+        Ensure that the authentication data is valid.
         If not, resets it and sets user_id to None.
         May update auth_info.
-        :return: true if auth data is valid, false otherwise"""
+        :return: true if auth data is valid, false otherwise
+        """
         if self.user_id is None:
             return False
         self._load_main_page()
@@ -213,6 +215,7 @@ class OtvetClient:
 
     @property
     def brand_list(self) -> List[str]:
+        """All brand urlnames."""
         if not self._brand_list:
             self._load_main_page()
         return self._brand_list
@@ -524,6 +527,10 @@ class OtvetClient:
         return factories.build_settings(data)
 
     def get_brand_experts(self, brand: BrandInput) -> List[models.BrandUser]:
+        """
+        Experts of the brand.
+        :return: list of experts.
+        """
         brand = normalize_brand(brand)
         data = self._call_checked('/v2/expert_list', {'urlname': brand})
         return [factories.build_user(u, {}) for u in data['list']]
@@ -809,6 +816,10 @@ class OtvetClient:
         return factories.build_user_profile(data, user, self.categories)
 
     def get_brand(self, brand: BrandInput) -> models.BrandProfile:
+        """
+        Brand profile.
+        :return: brand profile object
+        """
         brand = normalize_brand(brand)
         params = {'urlname': brand, 'sub': 1, 'stat': 1}
         data = self._call_checked('/v2/getBrands', params)['data']
