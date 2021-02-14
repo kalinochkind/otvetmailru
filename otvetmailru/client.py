@@ -300,6 +300,24 @@ class OtvetClient:
         data = self._call_checked('/v2/quserlist', params)
         return [factories.build_user_question_preview(q, self.categories) for q in data['qst']]
 
+    def get_brand_questions_page(self, brand: BrandInput, state: StateInput = None,
+                                 step: int = 20, offset: int = 0) -> List[models.UserQuestionPreview]:
+        """
+        Questions of a brand.
+        :param brand: brand
+        :param state: state of the questions (open, voting, resolved; all by default)
+        :param step: number of questions
+        :param offset: offset of the first question
+        :return: list of questions
+        """
+        state = normalize_state(state)
+        brand = normalize_brand(brand)
+        params = {'n': step, 'p': offset, 'user': brand, 'urlname': brand}
+        if state is not None:
+            params['state'] = str(state.value)
+        data = self._call_checked('/v2/bquserlist', params)
+        return [factories.build_user_question_preview(q, self.categories) for q in data['qst']]
+
     def get_votes_page(self, option: OptionInput, step: int = 20, offset: int = 0) -> List[models.PollUserPreview]:
         """
         Votes for a poll option.
@@ -342,6 +360,23 @@ class OtvetClient:
         if only_best:
             params['best'] = 1
         data = self._call_checked('/v2/auserlist', params)
+        return [factories.build_answer_preview(a, self.categories) for a in data['answers']]
+
+    def get_brand_answers_page(self, brand: BrandInput, only_best: bool = False,
+                               step: int = 20, offset: int = 0) -> List[models.AnswerPreview]:
+        """
+        Answers of brand experts.
+        :param brand: brand
+        :param only_best: show only best answers
+        :param step: number of answers
+        :param offset: offset of the fist answer
+        :return: list of answers
+        """
+        brand = normalize_brand(brand)
+        params = {'n': step, 'p': offset, 'usrid': brand, 'urlname': brand}
+        if only_best:
+            params['best'] = 1
+        data = self._call_checked('/v2/abrandans', params)
         return [factories.build_answer_preview(a, self.categories) for a in data['answers']]
 
     def get_watching_questions_page(self, user: UserInput = None, step: int = 20,
@@ -443,6 +478,23 @@ class OtvetClient:
         data = self._call_checked('/v2/who_follow', params)
         return [(factories.build_small_user_preview if reverse else factories.build_follower_preview)(u) for u in
                 data['followers']]
+
+    def get_brand_followers_page(self, brand: BrandInput, reverse: bool = False, step: int = 20, offset: int = 0
+                                 ) -> List[models.SmallUserPreview]:
+        """
+        Brand followers.
+        :param brand: brand
+        :param step: number of users
+        :param offset: offset of the first user
+        :return: list of followers
+        """
+        brand = normalize_brand(brand)
+        params = {'n': step, 'p': offset, 'id': brand, 'urlname': brand}
+        if reverse:
+            params['reverse'] = 1
+        data = self._call_checked('/v2/brand_who_follow', params)
+        return [(factories.build_small_user_preview if reverse else factories.build_follower_preview)(u)
+                for u in data['followers']]
 
     def get_blacklist_page(self, step: int = 20, offset: int = 0) -> List[models.SmallUserPreview]:
         """
@@ -614,6 +666,18 @@ class OtvetClient:
         """
         yield from iterate_pages(lambda p: self.get_user_questions_page(user, state, only_hidden, step, p), step)
 
+    def iterate_brand_questions(self, brand: BrandInput, state: StateInput = None, *,
+                                step: int = 20
+                                ) -> Iterator[List[models.UserQuestionPreview]]:
+        """
+        Lists of questions asked by brand experts.
+        :param brand: brand
+        :param state: state of the questions (open, voting, resolved), all by default
+        :param step: size of one list
+        :return: lists of quesions
+        """
+        yield from iterate_pages(lambda p: self.get_brand_questions_page(brand, state, step, p), step)
+
     def iterate_answers(self, question: QuestionInput, *, step: int = 20,
                         infinite: bool = False, delay: float = 10) -> Iterator[List[models.Answer]]:
         """
@@ -669,6 +733,17 @@ class OtvetClient:
         :return: lists of answers
         """
         yield from iterate_pages(lambda p: self.get_user_answers_page(user, only_best, step, p), step)
+
+    def iterate_brand_answers(self, brand: BrandInput, only_best: bool = False, *, step: int = 20
+                              ) -> Iterator[List[models.AnswerPreview]]:
+        """
+        Lists of answers of a brand.
+        :param brand: brand
+        :param only_best: return only best answers
+        :param step: size of one list
+        :return: lists of answers
+        """
+        yield from iterate_pages(lambda p: self.get_brand_answers_page(brand, only_best, step, p), step)
 
     def iterate_watching_questions(self, user: UserInput = None, *, step: int = 20
                                    ) -> Iterator[List[models.MinimalQuestionPreview]]:
@@ -771,6 +846,24 @@ class OtvetClient:
         :return: lists of users
         """
         yield from iterate_pages(lambda p: self.get_followers_page(user, False, step, p), step)
+
+    def iterate_brand_following(self, brand: BrandInput, *, step: int = 20) -> Iterator[List[models.SmallUserPreview]]:
+        """
+        Iterate the users whom the given brand experts follow.
+        :param brand: brand
+        :param step: size of one list
+        :return: lists of users
+        """
+        yield from iterate_pages(lambda p: self.get_brand_followers_page(brand, True, step, p), step)
+
+    def iterate_brand_followers(self, brand: BrandInput, *, step: int = 20) -> Iterator[List[models.FollowerPreview]]:
+        """
+        Iterate the followers of a brand.
+        :param brand: brand
+        :param step: size of one list
+        :return: lists of users
+        """
+        yield from iterate_pages(lambda p: self.get_brand_followers_page(brand, False, step, p), step)
 
     def iterate_blacklist(self, *, step: int = 20) -> Iterator[List[models.SmallUserPreview]]:
         """
@@ -1128,7 +1221,6 @@ class OtvetClient:
 # TODO gifts
 # TODO abuse
 # TODO is_adult without auth
-# TODO company/expert page
 # TODO change settings
 # TODO add images and videos
 # TODO see images and videos
