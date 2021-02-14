@@ -499,5 +499,5 @@ def build_brand_profile(data: dict) -> models.BrandProfile:
         voting_question_count=int(data['cnt']['questions_voting']),
         resolved_question_count=int(data['cnt']['questions_resolved']),
         description=data['brand_persontext'],
-        is_followed_by_me=bool(data['subscribed']),
+        is_followed_by_me=bool(data.get('subscribed')),
     )
