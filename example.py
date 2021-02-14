@@ -12,11 +12,12 @@ if os.path.isfile(AUTH_FILE):
         client = OtvetClient(auth_info=f.read())
 else:
     client = OtvetClient()
+if not client.check_authentication():
     email = input('email> ')
     password = input('password> ')
     client.authenticate(email, password)
-    with open('auth_info.txt', 'w') as f:
-        f.write(client.auth_info)
+with open('auth_info.txt', 'w') as f:
+    f.write(client.auth_info)
 
 me = client.get_user()
 print(f'Authenticated as {client.user_id} ({me.name}, {me.rate.name})')

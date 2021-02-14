@@ -184,6 +184,16 @@ class OtvetClient:
             return c.urlname
         return category.urlname
 
+    def check_authentication(self):
+        """Ensure that the authentication data is valid.
+        If not, resets it and sets user_id to None.
+        May update auth_info.
+        :return: true if auth data is valid, false otherwise"""
+        if self.user_id is None:
+            return False
+        self._load_main_page()
+        return self.user_id is not None
+
 
     @property
     def is_adult(self) -> Optional[bool]:

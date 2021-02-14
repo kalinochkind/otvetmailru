@@ -236,6 +236,7 @@ def build_incomplete_question(data: dict, category_provider: categories.Categori
     )
     return question
 
+
 def build_question(data: dict, category_provider: categories.Categories) -> models.Question:
     incomplete_question = build_incomplete_question(data, category_provider)
     question = models.Question(
