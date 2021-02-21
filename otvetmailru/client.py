@@ -68,6 +68,11 @@ def extract_brands_json(page: str) -> List[str]:
     return utils.read_json_prefix(string)
 
 
+def extract_errors_json(page: str) -> Dict[str, str]:
+    string = re.search(r'var ERRORS = ({.*)$', page, re.MULTILINE).group(1)
+    return utils.read_json_prefix(string)
+
+
 def iterate_pages(get_page: Callable[[int], list], step: int) -> Iterator[list]:
     for p in itertools.count(0, step):
         data = get_page(p)
@@ -101,6 +106,7 @@ class OtvetClient:
         self._auto_renew_token: bool = auto_renew_token
         self._api_retry_attempts = api_retry_attempts
         self._brand_list: List[str] = None
+        self._localized_errors: Dict[str, str] = None
         if auth_info:
             self._load_auth_info(auth_info)
 
@@ -110,6 +116,8 @@ class OtvetClient:
             self._categories = categories.Categories(extract_categories_json(main_page))
         if not self._brand_list:
             self._brand_list = extract_brands_json(main_page)
+        if not self._localized_errors:
+            self._localized_errors = extract_errors_json(main_page)
         if 'ot' in self._session.cookies:
             token = self._session.cookies['ot']
             salt = re.search(r'"salt" : "([a-zA-Z0-9]+)"', main_page).group(1)
@@ -127,6 +135,11 @@ class OtvetClient:
         self.user_id = data['user_id']
         self._session.cookies.set('Mpop', data['cookie'], domain='.mail.ru')
 
+    def _get_localized_message(self, error_code) -> Optional[str]:
+        if not self._localized_errors:
+            self._load_main_page()
+        return self._localized_errors.get(str(error_code))
+
     def _call_api(self, method: str, params: MethodArgs, direct: bool = False) -> dict:
         real_params = {**params, **self._auth_dict}
         if direct:
@@ -143,7 +156,7 @@ class OtvetClient:
             if response.get('error') == 'invalid_token' and self._auto_renew_token:
                 self._load_main_page()
                 return True
-        raise error.OtvetAPIError(response)
+        raise error.OtvetAPIError(response, self._get_localized_message(response.get('errid')))
 
     def _call_checked(self, method: str, params: MethodArgs, direct: bool = False) -> dict:
         for _ in range(self._api_retry_attempts):
@@ -1224,4 +1237,3 @@ class OtvetClient:
 # TODO change settings
 # TODO add images and videos
 # TODO see images and videos
-# TODO localized errors

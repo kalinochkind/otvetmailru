@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 class OtvetError(Exception):
     """Base class for all library errors."""
     pass
@@ -19,10 +22,12 @@ class OtvetAPIError(OtvetError):
     """
     An error returned from the API.
     :ivar response: API response as dict
+    :ivar localized_message: localized error message in HTML
     """
-    def __init__(self, response: dict):
+    def __init__(self, response: dict, localized_message: Optional[str]):
         super().__init__(response["error"])
         self.response = response
+        self.localized_message = localized_message
 
 
 class OtvetArgumentError(OtvetError):
