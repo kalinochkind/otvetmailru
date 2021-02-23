@@ -54,6 +54,13 @@ class BrandAnswerStatus(Enum):
         return bool(self.value)
 
 
+class AbuseReason:
+    """Predefined reasons for reports."""
+    spam = 'Спам / реклама'
+    insult = 'Оскорбительные высказывания'
+    change_category = 'Поменять категорию'
+
+
 class Avatar:
     """
     Avatar wrapper.

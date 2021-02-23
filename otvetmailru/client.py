@@ -1229,11 +1229,46 @@ class OtvetClient:
         params = {'aid': answer}
         self._call_checked('/v2/' + ('unnotimportant' if revert else 'notimportant'), params)
 
+    def report_question(self, question: QuestionInput, reason: str) -> None:
+        """
+        Report the question.
+        :param question: question to report
+        :param reason: reason why it is reported (see `models.AbuseReason`)
+        """
+        self._ensure_authenticated()
+        question = normalize_question(question)
+        self._call_checked('/v2/abuse', {'qid': question, 'report': reason})
+
+    def report_answer(self, answer: AnswerInput, reason: str) -> None:
+        """
+        Report the answer.
+        :param answer: answer to report
+        :param reason: reason why it is reported (see `models.AbuseReason`)
+        """
+        self._ensure_authenticated()
+        answer = normalize_answer(answer)
+        self._call_checked('/v2/abuse', {'aid': answer, 'report': reason})
+
+    def report_comment(self, comment: models.Comment, reason: str) -> None:
+        """
+        Report the comment.
+        :param comment: comment to report
+        :param reason: reason why it is reported (see `models.AbuseReason`)
+        """
+        self._ensure_authenticated()
+        if comment.type is models.CommentType.question:
+            question = comment.reference_id
+            answer = None
+        else:
+            answer = comment.reference_id
+            question = self.get_question_by_answer(answer).id
+        params = {'cid': comment.id, 'qid': question, 'report': reason}
+        utils.update_not_none(params, {'aid': answer})
+        self._call_checked('/v2/abuse', params)
+
 
 # TODO notifications
 # TODO gifts
-# TODO abuse
-# TODO is_adult without auth
 # TODO change settings
 # TODO add images and videos
 # TODO see images and videos
